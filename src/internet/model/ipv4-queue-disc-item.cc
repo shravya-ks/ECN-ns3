@@ -80,6 +80,46 @@ Ipv4QueueDiscItem::Print (std::ostream& os) const
 }
 
 bool
+Ipv4QueueDiscItem::EcnCapable()
+{
+  Ptr<Packet> p = GetPacket();
+  Ipv4Header ipvh;
+  p->PeekHeader(ipvh);
+  if(ipvh.GetEcn()==Ipv4Header::ECN_ECT1 || ipvh.GetEcn()==Ipv4Header::ECN_ECT0)
+    return true;
+
+  return false;
+}
+
+bool
+Ipv4QueueDiscItem::Mark()
+{
+
+  if(Ipv4QueueDiscItem::EcnCapable())
+  {
+    Ptr<Packet> p = GetPacket();
+    Ipv4Header ipvh;
+    p->RemoveHeader(ipvh);
+    ipvh.SetEcn(Ipv4Header::ECN_CE);
+    p->AddHeader(ipvh);
+    return true;
+  }
+  return false;
+}
+
+bool
+Ipv4QueueDiscItem::IsMarked()
+{
+  Ptr<Packet> p = GetPacket();
+  Ipv4Header ipvh;
+  p->PeekHeader(ipvh);
+  if(ipvh.GetEcn()==Ipv4Header::ECN_CE)
+    return true; 
+
+  return false;
+}
+
+bool
 Ipv4QueueDiscItem::GetUint8Value (QueueItem::Uint8Values field, uint8_t& value) const
 {
   bool ret = false;

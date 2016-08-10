@@ -79,6 +79,10 @@ public:
    */
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
+  virtual bool Mark ();
+
+  virtual bool IsMarked ();
+
 private:
   /**
    * \brief Default constructor

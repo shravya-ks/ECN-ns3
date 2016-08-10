@@ -108,6 +108,8 @@ public:
     uint32_t unforcedDrop;  //!< Early probability drops
     uint32_t forcedDrop;    //!< Forced drops, qavg > max threshold
     uint32_t qLimDrop;      //!< Drops due to queue limits
+    uint32_t unforcedMark;  //!< Early probability marks
+    uint32_t forcedMark;    //!< Forced mark, qavg > max threshold
   } Stats;
 
   /** 
@@ -118,6 +120,13 @@ public:
     DTYPE_NONE,        //!< Ok, no drop
     DTYPE_FORCED,      //!< A "forced" drop
     DTYPE_UNFORCED,    //!< An "unforced" (random) drop
+  };
+
+  enum
+  {
+    MTYPE_NONE,        //!< No mark
+    MTYPE_FORCED,      //!< A "forced" mark
+    MTYPE_UNFORCED,    //!< An "unforced" (random) mark
   };
 
   /**
@@ -324,6 +333,8 @@ private:
   Time m_idleTime;          //!< Start of current idle period
 
   Ptr<UniformRandomVariable> m_uv;  //!< rng stream
+
+  //TracedCallback<Ptr<const QueueItem> > m_traceMark;
 };
 
 }; // namespace ns3

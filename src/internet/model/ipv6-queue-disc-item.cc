@@ -95,4 +95,16 @@ Ipv6QueueDiscItem::GetUint8Value (QueueItem::Uint8Values field, uint8_t& value) 
   return ret;
 }
 
+bool
+Ipv6QueueDiscItem::IsMarked()
+{
+  return false;
+}
+
+bool
+Ipv6QueueDiscItem::Mark()
+{
+  return false;
+}
+
 } // namespace ns3

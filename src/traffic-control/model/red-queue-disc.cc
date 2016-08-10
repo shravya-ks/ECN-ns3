@@ -64,6 +64,7 @@
 #include "ns3/abort.h"
 #include "red-queue-disc.h"
 #include "ns3/drop-tail-queue.h"
+#include "ns3/ipv4-queue-disc-item.h"
 
 namespace ns3 {
 
@@ -349,13 +350,22 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
   m_countBytes += item->GetPacketSize ();
 
   uint32_t dropType = DTYPE_NONE;
+  
   if (m_qAvg >= m_minTh && nQueued > 1)
     {
       if ((!m_isGentle && m_qAvg >= m_maxTh) ||
           (m_isGentle && m_qAvg >= 2 * m_maxTh))
         {
-          NS_LOG_DEBUG ("adding DROP FORCED MARK");
-          dropType = DTYPE_FORCED;
+           if (item->Mark())
+          {
+            NS_LOG_DEBUG("adding FORCED MARK");
+            m_stats.forcedMark++;
+          }
+          else
+          {
+            NS_LOG_DEBUG ("adding FORCED DROP ");
+            dropType = DTYPE_FORCED;
+          }
         }
       else if (m_old == 0)
         {
@@ -372,12 +382,19 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       else if (DropEarly (item, nQueued))
         {
           NS_LOG_LOGIC ("DropEarly returns 1");
-          dropType = DTYPE_UNFORCED;
+          if(item->Mark())
+          {
+             m_stats.unforcedMark++;
+          }
+          else
+          {
+            dropType = DTYPE_UNFORCED;
+          }
         }
     }
   else 
     {
-      // No packets are being dropped
+      // No packets are being dropped or marked 
       m_vProb = 0.0;
       m_old = 0;
     }
@@ -409,16 +426,13 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
         }
       return false;
     }
-
-  bool retval = GetInternalQueue (0)->Enqueue (item);
-
-  // If Queue::Enqueue fails, QueueDisc::Drop is called by the internal queue
-  // because QueueDisc::AddInternalQueue sets the drop callback
+  
+  GetInternalQueue (0)->Enqueue (item);
 
   NS_LOG_LOGIC ("Number packets " << GetInternalQueue (0)->GetNPackets ());
   NS_LOG_LOGIC ("Number bytes " << GetInternalQueue (0)->GetNBytes ());
 
-  return retval;
+  return true;
 }
 
 /*
@@ -645,7 +659,6 @@ RedQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
       m_count = 0;
       m_countBytes = 0;
       /// \todo Implement set bit to mark
-
       return 1; // drop
     }
 
