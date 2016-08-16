@@ -356,7 +356,7 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       if ((!m_isGentle && m_qAvg >= m_maxTh) ||
           (m_isGentle && m_qAvg >= 2 * m_maxTh))
         {
-           if (item->Mark())
+           if (static_cast<Ipv4Q>item->Mark())
           {
             NS_LOG_DEBUG("adding FORCED MARK");
             m_stats.forcedMark++;

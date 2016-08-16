@@ -1,0 +1,30 @@
+FAIL: Test Suite "ecn-red-queue-disc" (0.050)
+FAIL: Test Suite "Sanity check on the red queue implementation" (0.050)
+    Details:
+      Message:   There should be some dropped packets
+      Condition: drop.test3 (actual) == 0 (limit)
+      Actual:    26
+      Limit:     0
+      File:      ../src/traffic-control/test/ecn-red-queue-disc-test-suite.cc
+      Line:      255
+    Details:
+      Message:   There should be some marked packets
+      Condition: mark.test3 (actual) != 0 (limit)
+      Actual:    0
+      Limit:     0
+      File:      ../src/traffic-control/test/ecn-red-queue-disc-test-suite.cc
+      Line:      256
+    Details:
+      Message:   There should be some dropped packets
+      Condition: drop.test3 (actual) == 0 (limit)
+      Actual:    45
+      Limit:     0
+      File:      ../src/traffic-control/test/ecn-red-queue-disc-test-suite.cc
+      Line:      255
+    Details:
+      Message:   There should be some marked packets
+      Condition: mark.test3 (actual) != 0 (limit)
+      Actual:    0
+      Limit:     0
+      File:      ../src/traffic-control/test/ecn-red-queue-disc-test-suite.cc
+      Line:      256

@@ -59,8 +59,8 @@ public:
   CodelQueueDiscTestItem (Ptr<Packet> p, const Address & addr, uint16_t protocol);
   virtual ~CodelQueueDiscTestItem ();
   virtual void AddHeader (void);
-  virtual bool Mark(void);
-  virtual bool IsMarked(void);
+  //virtual bool Mark(void);
+  //virtual bool IsMarked(void);
 
 private:
   CodelQueueDiscTestItem ();
@@ -82,7 +82,7 @@ CodelQueueDiscTestItem::AddHeader (void)
 {
 }
 
-
+/*
 bool
 CodelQueueDiscTestItem::Mark (void)
 {
@@ -93,7 +93,7 @@ bool
 CodelQueueDiscTestItem::IsMarked (void)
 {
   return false;
-}
+}*/
 
 // Test 1: simple enqueue/dequeue with no drops
 class CoDelQueueDiscBasicEnqueueDequeue : public TestCase

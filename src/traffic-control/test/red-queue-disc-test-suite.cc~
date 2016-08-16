@@ -36,8 +36,8 @@ public:
   RedQueueDiscTestItem (Ptr<Packet> p, const Address & addr, uint16_t protocol);
   virtual ~RedQueueDiscTestItem ();
   virtual void AddHeader (void);
-  virtual bool Mark(void);
-  virtual bool IsMarked(void);
+  //virtual bool Mark(void);
+  //virtual bool IsMarked(void);
 
 private:
   RedQueueDiscTestItem ();
@@ -59,7 +59,7 @@ RedQueueDiscTestItem::AddHeader (void)
 {
 }
 
-
+/*
 bool
 RedQueueDiscTestItem::Mark (void)
 {
@@ -70,7 +70,7 @@ bool
 RedQueueDiscTestItem::IsMarked (void)
 {
   return false;
-}
+}*/
 
 class RedQueueDiscTestCase : public TestCase
 {
