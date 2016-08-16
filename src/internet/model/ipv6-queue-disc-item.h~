@@ -79,9 +79,9 @@ public:
    */
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
-  bool Mark ();
+  virtual bool Mark ();
 
-  bool IsMarked ();
+  virtual bool IsMarked () const;
 
 private:
   /**

@@ -79,11 +79,23 @@ public:
    */
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
-  bool EcnCapable ();
+  /**
+    * \brief Checks if the packet's ECT-0 or ECT-1 bit is set 
+    * \returns true if the packet's ECT_0 or ECT-1 bit is set, false otherwise
+    */
+  bool IsEcnCapable (void) const;
 
-  virtual bool Mark ();
-  
-  virtual bool IsMarked ();
+  /**
+   * \brief Sets a congestion experienced field in the packet if there is congestion and if the packet has ect filed set on
+   * \returns true if the packet has been marked and false otherwise
+   */
+  virtual bool Mark (void);
+
+  /** 
+   * \brief Checks if the packet is marked(i.e congestion experienced bit on) or not 
+   * \returns true if the packet's congestion experienced bit it set on, false otherwise
+   */  
+  virtual bool IsMarked (void) const;
 
 private:
   /**

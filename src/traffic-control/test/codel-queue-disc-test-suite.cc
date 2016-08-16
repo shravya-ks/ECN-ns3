@@ -60,7 +60,7 @@ public:
   virtual ~CodelQueueDiscTestItem ();
   virtual void AddHeader (void);
   virtual bool Mark(void);
-  virtual bool IsMarked(void);
+  virtual bool IsMarked(void) const;
 
 private:
   CodelQueueDiscTestItem ();
@@ -90,7 +90,7 @@ CodelQueueDiscTestItem::Mark (void)
 }
 
 bool
-CodelQueueDiscTestItem::IsMarked (void)
+CodelQueueDiscTestItem::IsMarked (void) const
 {
   return false;
 }

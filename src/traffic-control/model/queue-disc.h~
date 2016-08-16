@@ -91,9 +91,17 @@ public:
    */
   virtual void Print (std::ostream &os) const;
 
-  virtual bool Mark (void) = 0;
-   
-  virtual bool IsMarked (void) = 0;
+  /**
+   * \brief Sets a congestion experienced field in the packet if there is congestion and if the packet has ect filed set on
+   * \returns true if the packet has been marked and false otherwise
+   */
+  virtual bool Mark (void) = 0 ;
+  
+  /** 
+   * \brief Checks if the packet is marked(i.e congestion experienced bit on) or not 
+   * \returns true if the packet's congestion experienced bit it set on, false otherwise
+   */
+  virtual bool IsMarked (void) const;
 
 private:
   /**
@@ -120,16 +128,6 @@ private:
   uint16_t m_protocol;    //!< L3 Protocol number
   uint8_t m_txq;          //!< Transmission queue index
 
-
-//public:
-   /**
-   * \brief Sets the CE bit on in IPv4 or IPv6 header if there is congestion
-   */
- // virtual bool Mark() = 0;
-   /**
-   * \brief Checks if the packet is marked or not
-   */
-  // virtual bool IsMarked() = 0;
 };
 
 

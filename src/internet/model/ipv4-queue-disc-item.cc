@@ -80,8 +80,9 @@ Ipv4QueueDiscItem::Print (std::ostream& os) const
 }
 
 bool
-Ipv4QueueDiscItem::EcnCapable()
+Ipv4QueueDiscItem::IsEcnCapable(void) const
 {
+  NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket();
   Ipv4Header ipvh;
   p->PeekHeader(ipvh);
@@ -92,10 +93,10 @@ Ipv4QueueDiscItem::EcnCapable()
 }
 
 bool
-Ipv4QueueDiscItem::Mark()
+Ipv4QueueDiscItem::Mark(void)
 {
-
-  if(EcnCapable())
+  NS_LOG_FUNCTION (this);
+  if(IsEcnCapable())
   {
     Ptr<Packet> p = GetPacket();
     Ipv4Header ipvh;
@@ -108,8 +109,9 @@ Ipv4QueueDiscItem::Mark()
 }
 
 bool
-Ipv4QueueDiscItem::IsMarked()
+Ipv4QueueDiscItem::IsMarked(void) const
 {
+  NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket();
   Ipv4Header ipvh;
   p->PeekHeader(ipvh);
