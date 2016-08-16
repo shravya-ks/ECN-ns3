@@ -266,12 +266,6 @@ public:
    */
   EcnType GetEcn (void) const;
 
-   /**
-   * \param ecn the ECNType
-   * \returns std::string of ECNType
-   */
-  std::string EcnTypeToString (EcnType ecn) const;
-
 private:
   /**
    * \brief The traffic class.

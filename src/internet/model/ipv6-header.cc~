@@ -255,7 +255,7 @@ void Ipv6Header::SetEcn (EcnType ecn)
 {
   NS_LOG_FUNCTION (this << ecn);
   m_trafficClass &= 0xFC; // Clear out the ECN part, retain 6 bits of DSCP
-  m_trafficClass |= ecn;
+  m_tos |= ecn;
 }
 
 Ipv6Header::EcnType Ipv6Header::GetEcn (void) const
