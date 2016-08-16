@@ -1,2 +1,0 @@
-PASS: Test Suite "ecn-red-queue-disc" (0.040)
-PASS: Test Suite "Sanity check on the red queue implementation" (0.040)
