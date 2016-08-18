@@ -354,16 +354,16 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       if ((!m_isGentle && m_qAvg >= m_maxTh) ||
           (m_isGentle && m_qAvg >= 2 * m_maxTh))
         {
-          if (item->Mark())
-          {
-            NS_LOG_DEBUG("adding FORCED MARK");
-            m_stats.forcedMark++;
-          }
+          if (item->Mark ())
+            {
+              NS_LOG_DEBUG ("adding FORCED MARK");
+              m_stats.forcedMark++;
+            }
           else
-          {
-            NS_LOG_DEBUG ("adding FORCED DROP ");
-            dropType = DTYPE_FORCED;
-          }
+            {
+              NS_LOG_DEBUG ("adding FORCED DROP ");
+              dropType = DTYPE_FORCED;
+            }
         }
       else if (m_old == 0)
         {
@@ -380,14 +380,14 @@ RedQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       else if (DropEarly (item, nQueued))
         {
           NS_LOG_LOGIC ("DropEarly returns 1");
-          if(item->Mark())
-          {
-             m_stats.unforcedMark++;
-          }
+          if (item->Mark ())
+            {
+              m_stats.unforcedMark++;
+            }
           else
-          {
-            dropType = DTYPE_UNFORCED;
-          }
+            {
+              dropType = DTYPE_UNFORCED;
+            }
         }
     }
   else 
