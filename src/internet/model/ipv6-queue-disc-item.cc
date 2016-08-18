@@ -80,44 +80,46 @@ Ipv6QueueDiscItem::Print (std::ostream& os) const
 }
 
 bool
-Ipv6QueueDiscItem::IsEcnCapable(void) const
+Ipv6QueueDiscItem::IsEcnCapable (void) const
 {
   NS_LOG_FUNCTION (this);
-  Ptr<Packet> p = GetPacket();
+  Ptr<Packet> p = GetPacket ();
   Ipv6Header ipvh;
-  p->PeekHeader(ipvh);
-  if(ipvh.GetEcn()==Ipv6Header::ECN_ECT1 || ipvh.GetEcn()==Ipv6Header::ECN_ECT0)
-    return true;
-
+  p->PeekHeader (ipvh);
+  if (ipvh.GetEcn () == Ipv6Header::ECN_ECT1 || ipvh.GetEcn () == Ipv6Header::ECN_ECT0)
+    {
+      return true;
+    }
   return false;
 }
 
 bool
-Ipv6QueueDiscItem::Mark(void)
+Ipv6QueueDiscItem::Mark (void)
 {
   NS_LOG_FUNCTION (this);
-  if(IsEcnCapable())
-  {
-    Ptr<Packet> p = GetPacket();
-    Ipv6Header ipvh;
-    p->RemoveHeader(ipvh);
-    ipvh.SetEcn(Ipv6Header::ECN_CE);
-    p->AddHeader(ipvh);
-    return true;
-  }
-  return true;
+  if (IsEcnCapable ())
+    {
+      Ptr<Packet> p = GetPacket ();
+      Ipv6Header ipvh;
+      p->RemoveHeader (ipvh);
+      ipvh.SetEcn (Ipv6Header::ECN_CE);
+      p->AddHeader (ipvh);
+      return true;
+    }
+  return false;
 }
 
 bool
-Ipv6QueueDiscItem::IsMarked(void) const
+Ipv6QueueDiscItem::IsMarked (void) const
 {
   NS_LOG_FUNCTION (this);
-  Ptr<Packet> p = GetPacket();
+  Ptr<Packet> p = GetPacket ();
   Ipv6Header ipvh;
-  p->PeekHeader(ipvh);
-  if(ipvh.GetEcn()==Ipv6Header::ECN_CE)
-    return true; 
-
+  p->PeekHeader (ipvh);
+  if (ipvh.GetEcn () == Ipv6Header::ECN_CE)
+    {
+      return true;
+    }
   return false;
 }
 
