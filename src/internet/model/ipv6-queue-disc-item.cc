@@ -84,11 +84,14 @@ Ipv6QueueDiscItem::IsEcnCapable (void) const
 {
   NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket ();
-  Ipv6Header ipvh;
-  p->PeekHeader (ipvh);
-  if (ipvh.GetEcn () == Ipv6Header::ECN_ECT1 || ipvh.GetEcn () == Ipv6Header::ECN_ECT0)
+  if (p->GetSize ())
     {
-      return true;
+      Ipv6Header ipvh;
+      p->PeekHeader (ipvh);
+      if (ipvh.GetEcn () == Ipv6Header::ECN_ECT1 || ipvh.GetEcn () == Ipv6Header::ECN_ECT0)
+        {
+          return true;
+        }
     }
   return false;
 }
@@ -114,12 +117,15 @@ Ipv6QueueDiscItem::IsMarked (void) const
 {
   NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket ();
-  Ipv6Header ipvh;
-  p->PeekHeader (ipvh);
-  if (ipvh.GetEcn () == Ipv6Header::ECN_CE)
+  if (p->GetSize ())
     {
-      return true;
-    }
+      Ipv6Header ipvh;
+      p->PeekHeader (ipvh);
+      if (ipvh.GetEcn () == Ipv6Header::ECN_CE)
+        {
+          return true;
+        }
+    } 
   return false;
 }
 

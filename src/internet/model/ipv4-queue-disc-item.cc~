@@ -84,14 +84,11 @@ Ipv4QueueDiscItem::IsEcnCapable (void) const
 {
   NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket ();
-  if (p->GetSize ())
+  Ipv4Header ipvh;
+  p->PeekHeader (ipvh);
+  if (ipvh.GetEcn () == Ipv4Header::ECN_ECT1 || ipvh.GetEcn () == Ipv4Header::ECN_ECT0)
     {
-      Ipv4Header ipvh;
-      p->PeekHeader (ipvh);
-      if (ipvh.GetEcn () == Ipv4Header::ECN_ECT1 || ipvh.GetEcn () == Ipv4Header::ECN_ECT0)
-        {
-          return true;
-        }
+      return true;
     }
   return false;
 }
