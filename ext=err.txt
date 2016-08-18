@@ -1,0 +1,10 @@
+FAIL: Test Suite "adaptive-red-queue-disc" (3.050)
+PASS: Test Suite "Sanity check on automatically set parameters of ARED" (0.010)
+FAIL: Test Suite "Sanity check on adaptive parameter of ARED" (3.040)
+    Details:
+      Message:   forcedDrop should be more than unforcedDrop
+      Condition: st.unforcedDrop (actual) < st.forcedDrop (limit)
+      Actual:    0
+      Limit:     0
+      File:      ../src/test/ns3tc/adaptive-red-queue-disc-test-suite.cc
+      Line:      450
