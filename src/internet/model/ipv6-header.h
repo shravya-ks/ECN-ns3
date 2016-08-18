@@ -146,11 +146,11 @@ public:
 
   enum EcnType
    {
-      // Prefixed with "ECN" to avoid name clash (bug 1723)
-      ECN_NotECT = 0x00,
-      ECN_ECT1 = 0x01,
-      ECN_ECT0 = 0x02,
-      ECN_CE = 0x03
+     // Prefixed with "ECN" to avoid name clash
+     ECN_NotECT = 0x00,
+     ECN_ECT1 = 0x01,
+     ECN_ECT0 = 0x02,
+     ECN_CE = 0x03
    }; 
 
   /**
@@ -159,14 +159,14 @@ public:
    */
   void SetEcn (EcnType ecn);
  
-   /**
-   * \returns the ECN field of this packet.
+  /**
+   * \return the ECN field of this packet.
    */
   EcnType GetEcn (void) const;
 
-   /**
+  /**
    * \param ecn the ECNType
-   * \returns std::string of ECNType
+   * \return std::string of ECNType
    */
   std::string EcnTypeToString (EcnType ecn) const;
 

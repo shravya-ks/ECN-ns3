@@ -192,6 +192,13 @@ void Ipv6Header::SetDscp (DscpType dscp)
   m_trafficClass |= (dscp << 2);
 }
 
+void Ipv6Header::SetEcn (EcnType ecn)
+{
+  NS_LOG_FUNCTION (this << ecn);
+  m_trafficClass &= 0xFC; // Clear out the ECN part, retain 6 bits of DSCP
+  m_trafficClass |= ecn;
+}
+
 Ipv6Header::DscpType Ipv6Header::GetDscp (void) const
 {
   NS_LOG_FUNCTION (this);
@@ -251,14 +258,8 @@ std::string Ipv6Header::DscpTypeToString (DscpType dscp) const
     };
 }
 
-void Ipv6Header::SetEcn (EcnType ecn)
-{
-  NS_LOG_FUNCTION (this << ecn);
-  m_trafficClass &= 0xFC; // Clear out the ECN part, retain 6 bits of DSCP
-  m_trafficClass |= ecn;
-}
-
-Ipv6Header::EcnType Ipv6Header::GetEcn (void) const
+Ipv6Header::EcnType
+Ipv6Header::GetEcn (void) const
 {
   NS_LOG_FUNCTION (this);
   // Extract only last 2 bits of Traffic Class byte, i.e 0x3
