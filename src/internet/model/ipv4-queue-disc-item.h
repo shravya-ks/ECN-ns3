@@ -80,9 +80,9 @@ public:
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
   /**
-    * \brief Checks whether the packet has ECT-0 or ECT-1 bits set 
-    * \returns true if the packet has ECT_0 or ECT-1 bits set, false otherwise
-    */
+   * \brief Checks whether the packet has ECT-0 or ECT-1 bits set 
+   * \returns true if the packet has ECT_0 or ECT-1 bits set, false otherwise
+   */
   bool IsEcnCapable (void) const;
 
   /**
