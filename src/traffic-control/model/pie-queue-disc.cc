@@ -205,7 +205,6 @@ PieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       // Early probability drop: proactive
       if (item->Mark ())
         {
-          Drop (item);
           m_stats.unforcedMark++;
           return true;
         }
