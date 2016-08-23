@@ -63,7 +63,7 @@ private:
 };
 
 EcnRedQueueDiscTestCase::EcnRedQueueDiscTestCase ()
-  : TestCase ("Sanity check on the red queue implementation")
+  : TestCase ("Sanity check on the ecn implementation for IPv4 header for red queue")
 {
 }
 
@@ -137,30 +137,30 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 8 * modeSize, "There should be eight packets in there");
 
   
-  Ptr<Ipv4QueueDiscItem> item;
+  Ptr<QueueDiscItem> item;
 
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the first packet");
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 7 * modeSize, "There should be seven packets in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
      
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 6 * modeSize, "There should be six packet in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
  
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 5 * modeSize, "There should be five packets in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p3->GetUid (), "Was this the third packet ?");
 
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<QueueDiscItem> (queue->Dequeue ());
 
-  item = StaticCast<Ipv4QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item == 0), true, "There are really no packets in there");
 
  
@@ -179,7 +179,7 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
                          "Verify that we can actually set the attribute QueueLimit");
   queue->Initialize ();
   Enqueue (queue, pktSize, 200);
-  RedQueueDisc::Stats st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  RedQueueDisc::Stats st = queue->GetStats ();
   NS_TEST_EXPECT_MSG_EQ (st.unforcedMark, 0, "There should zero marked packets due probability mark");
   NS_TEST_EXPECT_MSG_EQ (st.forcedMark, 0, "There should zero marked packets due hardmark mark");
   NS_TEST_EXPECT_MSG_EQ (st.unforcedDrop, 0, "There should zero dropped packets due probability mark");
@@ -208,7 +208,7 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
                          "Verify that we can actually set the attribute QW");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  st = queue->GetStats ();
   drop.test3 = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
   mark.test3 = st.unforcedMark + st.forcedMark;
   NS_TEST_EXPECT_MSG_EQ (drop.test3, 0, "There should be no unforced or forced dropped packets");
@@ -230,7 +230,7 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
                          "Verify that we can actually set the attribute QW");
   queue->Initialize ();
   Enqueue (queue, pktSize, 500);
-  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  st = queue->GetStats ();
   drop.test4 = st.qLimDrop;
   NS_TEST_EXPECT_MSG_NE (drop.test4, 0, "There should be some dropped packets due to Queuelimit");
   uint32_t drops = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
