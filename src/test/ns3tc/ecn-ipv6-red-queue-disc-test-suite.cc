@@ -59,6 +59,7 @@ public:
   virtual void DoRun (void);
 private:
   void Enqueue (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t nPkt);
+  void EnqueueNonEcnCapable (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t nPkt);
   void RunRedTest (StringValue mode);
 };
 
@@ -77,8 +78,9 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
   double maxTh = 5;
   uint32_t qSize = 8;
   Ptr<RedQueueDisc> queue = CreateObject<RedQueueDisc> ();
+  queue->AssignStreams(1);
 
-  // test 1: simple enqueue/dequeue with no drops
+  // test 1: simple enqueue/dequeue with no drops or marks
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
                          "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
@@ -100,12 +102,12 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
       queue->SetQueueLimit (qSize * modeSize);
     }
 
-  Ipv6Header hdr;
+  Ipv6Header hdr, tmp_hdr;
   hdr.SetEcn(Ipv6Header::ECN_ECT0);
-  
+
   Ptr<Packet> p1, p2, p3, p4, p5, p6, p7, p8;
   p1 = Create<Packet> (pktSize);
- 
+
   p2 = Create<Packet> (pktSize);
  
   p3 = Create<Packet> (pktSize);
@@ -114,57 +116,153 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
  
   p5 = Create<Packet> (pktSize);
  
-  p6 = Create<Packet> (pktSize);
-  
-  p7 = Create<Packet> (pktSize);
-  
-  p8 = Create<Packet> (pktSize);
- 
   queue->Initialize ();
-  
+
+  Ptr<QueueDiscItem> item; 
+
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 0 * modeSize, "There should be no packets in there");
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p1, dest, 0, hdr));
-  
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p1, dest, 0, hdr);
+  item->AddHeader();
+  queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 1 * modeSize, "There should be one packet in there");
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p2, dest, 0, hdr));
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p2, dest, 0, hdr);
+  item->AddHeader();
+  queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p3, dest, 0, hdr));
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p4, dest, 0, hdr));
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p5, dest, 0, hdr));
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p6, dest, 0, hdr));
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p7, dest, 0, hdr));
-  queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p8, dest, 0, hdr));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 8 * modeSize, "There should be eight packets in there");
-
-  
-  Ptr<QueueDiscItem> item;
-
-  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the first packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 7 * modeSize, "There should be seven packets in there");
-  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
-     
-  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 6 * modeSize, "There should be six packet in there");
-  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
- 
-  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p3, dest, 0, hdr);
+  item->AddHeader();
+  queue->Enqueue (item);
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p4, dest, 0, hdr);
+  item->AddHeader();
+  queue->Enqueue (item);
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p5, dest, 0, hdr);
+  item->AddHeader();
+  queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 5 * modeSize, "There should be five packets in there");
+  
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the first packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 4 * modeSize, "There should be four packets in there");
+  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
+ 
+  if(item->GetPacket()->GetSize())
+  {
+     item->GetPacket()->PeekHeader (tmp_hdr);
+     NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn(), Ipv6Header::ECN_ECT0, "The packet should be marked"); 
+  }
+    
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 3 * modeSize, "There should be three packet in there");
+  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
+  
+  if(item->GetPacket()->GetSize())
+  {
+     item->GetPacket()->PeekHeader (tmp_hdr);
+     NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn(), Ipv6Header::ECN_ECT0, "The packet should be marked"); 
+  }
+ 
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p3->GetUid (), "Was this the third packet ?");
+  
+  DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
 
-  DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  DynamicCast<QueueDiscItem> (queue->Dequeue ());
-  DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item == 0), true, "There are really no packets in there");
+  
+  //test2 : Test with packets whhich are not ECN-Capable
+ 
+  queue = CreateObject<RedQueueDisc> ();
 
-  item = DynamicCast<QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
+                         "Verify that we can actually set the attribute MinTh");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
+                         "Verify that we can actually set the attribute MaxTh");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (0.002)), true,
+                         "Verify that we can actually set the attribute QW");
+
+  if (queue->GetMode () == Queue::QUEUE_MODE_BYTES)
+    {
+      pktSize = 1000;
+      modeSize = pktSize + 40;
+      queue->SetTh (minTh * modeSize, maxTh * modeSize);
+      queue->SetQueueLimit (qSize * modeSize);
+    }
+
+  p1 = Create<Packet> (pktSize);
+
+  p2 = Create<Packet> (pktSize);
+ 
+  p3 = Create<Packet> (pktSize);
+ 
+  p4 = Create<Packet> (pktSize);
+ 
+  p5 = Create<Packet> (pktSize);
+ 
+  Ipv6Header hdr1;
+  
+  queue->Initialize ();
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 0 * modeSize, "There should be no packets in there");
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p1, dest, 0, hdr1);
+  item->AddHeader();
+  queue->Enqueue (item);
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 1 * modeSize, "There should be one packet in there");
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p2, dest, 0, hdr1);
+  item->AddHeader();
+  queue->Enqueue (item);
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p3, dest, 0, hdr1);
+  item->AddHeader();
+  queue->Enqueue (item);
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p4, dest, 0, hdr1);
+  item->AddHeader();
+  queue->Enqueue (item);
+  item = Create<EcnIpv6RedQueueDiscTestItem> (p5, dest, 0, hdr1);
+  item->AddHeader();
+  queue->Enqueue (item);
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 5 * modeSize, "There should be five packets in there");
+  
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the first packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 4 * modeSize, "There should be four packets in there");
+  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
+ 
+  if(item->GetPacket()->GetSize())
+  {
+     item->GetPacket()->PeekHeader (tmp_hdr);
+     NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn(), Ipv6Header::ECN_NotECT, "The packet should not be marked"); 
+  }
+    
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 3 * modeSize, "There should be  three packets in there");
+  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
+  
+  if(item->GetPacket()->GetSize())
+    {
+      item->GetPacket()->PeekHeader (tmp_hdr);
+      NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn(), Ipv6Header::ECN_NotECT, "The packet should not be marked"); 
+    }
+ 
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
+  NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p3->GetUid (), "Was this the third packet ?");
+    
+  DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
+  item = DynamicCast<Ipv6QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item == 0), true, "There are really no packets in there");
 
- 
-  // test 2: more data, but with no marks or drops
+  
+  // test 3: more data, but with no marks or drops
   queue = CreateObject<RedQueueDisc> ();
   minTh = 70 * modeSize;
   maxTh = 150 * modeSize;
@@ -189,12 +287,13 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
   
   // save number of drops from tests
   struct d {
-    uint32_t test3;
     uint32_t test4;
+    uint32_t test5;
+    uint32_t test6;
   } drop,mark;
  
   
-  // test 3: more data, now drops due QW change
+  // test 4: more data which are ECN capable resulting in forced and unforced marks but no forced and unforced drops 
   queue = CreateObject<RedQueueDisc> ();
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
                          "Verify that we can actually set the attribute Mode");
@@ -209,13 +308,33 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
   st = queue->GetStats ();
-  drop.test3 = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
-  mark.test3 = st.unforcedMark + st.forcedMark;
-  NS_TEST_EXPECT_MSG_EQ (drop.test3, 0, "There should be no unforced or forced dropped packets");
-  NS_TEST_EXPECT_MSG_NE (mark.test3, 0, "There should be some marked packets");
+  drop.test4 = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
+  mark.test4 = st.unforcedMark + st.forcedMark;
+  NS_TEST_EXPECT_MSG_EQ (drop.test4, 0, "There should be no unforced or forced dropped packets");
+  NS_TEST_EXPECT_MSG_NE (mark.test4, 0, "There should be some marked packets");
   
+  
+  //test 5:  more data which are not ECN capable resulting in forced and unforced drops but no forced and unforced marks
+  queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
+                         "Verify that we can actually set the attribute MinTh");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
+                         "Verify that we can actually set the attribute MaxTh");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (0.020)), true,
+                         "Verify that we can actually set the attribute QW");
+  queue->Initialize ();
+  EnqueueNonEcnCapable (queue, pktSize, 300);
+  st = queue->GetStats ();
+  drop.test5 = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
+  mark.test5 = st.unforcedMark + st.forcedMark;
+  NS_TEST_EXPECT_MSG_EQ (mark.test5, 0, "There should be no unforced or forced marked packets");
+  NS_TEST_EXPECT_MSG_NE (drop.test5, 0, "There should be some dropped packets");
    
-  // test 4: reduced maxTh, this causes more drops
+  // test 6: reduced maxTh, this causes more drops
   maxTh = 100 * modeSize;
   queue = CreateObject<RedQueueDisc> ();
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
@@ -231,12 +350,12 @@ EcnIpv6RedQueueDiscTestCase::RunRedTest (StringValue mode)
   queue->Initialize ();
   Enqueue (queue, pktSize, 500);
   st = queue->GetStats ();
-  drop.test4 = st.qLimDrop;
-  NS_TEST_EXPECT_MSG_NE (drop.test4, 0, "There should be some dropped packets due to Queuelimit");
+  drop.test6 = st.qLimDrop;
+  NS_TEST_EXPECT_MSG_NE (drop.test6, 0, "There should be some dropped packets due to Queuelimit");
   uint32_t drops = st.unforcedDrop + st.forcedDrop - st.qLimDrop;
   NS_TEST_EXPECT_MSG_EQ (drops, 0, "There should be no unforced and forced dropped packets");
-  mark.test4 = st.unforcedMark + st.forcedMark; 
-  NS_TEST_EXPECT_MSG_NE (mark.test4, 0, "There should be some marked packets  due to probability mark and hard mark");
+  mark.test6 = st.unforcedMark + st.forcedMark; 
+  NS_TEST_EXPECT_MSG_NE (mark.test6, 0, "There should be some marked packets  due to probability mark and hard mark");
  
  }
 
@@ -246,12 +365,30 @@ EcnIpv6RedQueueDiscTestCase::Enqueue (Ptr<RedQueueDisc> queue, uint32_t size, ui
   Address dest;
   Ipv6Header hdr;
   hdr.SetEcn(Ipv6Header::ECN_ECT0);
+  Ptr<QueueDiscItem> item;
 
   for (uint32_t i = 0; i < nPkt; i++)
     {
       Ptr<Packet> p = Create<Packet> (size);
-      p->AddHeader(hdr);
-      queue->Enqueue (Create<EcnIpv6RedQueueDiscTestItem> (p, dest, 0, hdr));
+      item = Create<EcnIpv6RedQueueDiscTestItem> (p, dest, 0, hdr);
+      item->AddHeader();
+      queue->Enqueue (item);
+    }
+}
+
+void 
+EcnIpv6RedQueueDiscTestCase::EnqueueNonEcnCapable (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t nPkt)
+{
+  Address dest;
+  Ipv6Header hdr;
+  Ptr<QueueDiscItem> item;
+ 
+  for (uint32_t i = 0; i < nPkt; i++)
+    {
+      Ptr<Packet> p = Create<Packet> (size);
+      item = Create<EcnIpv6RedQueueDiscTestItem> (p, dest, 0, hdr);
+      item->AddHeader();
+      queue->Enqueue (item);
     }
 }
 

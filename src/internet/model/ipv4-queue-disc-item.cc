@@ -117,11 +117,14 @@ Ipv4QueueDiscItem::IsMarked (void) const
 {
   NS_LOG_FUNCTION (this);
   Ptr<Packet> p = GetPacket ();
-  Ipv4Header ipvh;
-  p->PeekHeader (ipvh);
-  if (ipvh.GetEcn () == Ipv4Header::ECN_CE)
+  if (p->GetSize ())
     {
-      return true;
+      Ipv4Header ipvh;
+      p->PeekHeader (ipvh);
+      if (ipvh.GetEcn () == Ipv4Header::ECN_CE)
+        {
+          return true;
+        }
     }
   return false;
 }
