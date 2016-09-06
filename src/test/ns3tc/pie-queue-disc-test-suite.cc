@@ -37,7 +37,6 @@ public:
   virtual ~PieQueueDiscTestItem ();
   virtual void AddHeader (void);
   virtual bool Mark(void);
-  virtual bool IsMarked(void) const;
 
 private:
   PieQueueDiscTestItem ();
@@ -61,12 +60,6 @@ PieQueueDiscTestItem::AddHeader (void)
 
 bool
 PieQueueDiscTestItem::Mark (void)
-{
-  return false;
-}
-
-bool
-PieQueueDiscTestItem::IsMarked (void) const
 {
   return false;
 }

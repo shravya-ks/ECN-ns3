@@ -96,12 +96,6 @@ public:
    * \return true if the packet gets marked, false otherwise
    */
   virtual bool Mark (void) = 0 ;
-  
-  /** 
-   * \brief Checks whether the packet is already marked with ECN_CE
-   * \return true if the packet is already marked with ECN_CE, false otherwise
-   */
-  virtual bool IsMarked (void) const = 0;
 
 private:
   /**

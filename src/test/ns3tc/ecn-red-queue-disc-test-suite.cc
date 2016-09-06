@@ -15,8 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Authors: Shravya Ks <shravya.ks0@gmail.com>
- *          Mohit P. Tahiliani <tahiliani@nitk.edu.in>
+ * Author: Shravya Ks <shravya.ks0@gmail.com>
  *
  */
 
@@ -125,21 +124,21 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
 
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 0 * modeSize, "There should be no packets in there");
   item = Create<EcnRedQueueDiscTestItem> (p1, dest, 0, hdr);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 1 * modeSize, "There should be one packet in there");
   item = Create<EcnRedQueueDiscTestItem> (p2, dest, 0, hdr);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
   item = Create<EcnRedQueueDiscTestItem> (p3, dest, 0, hdr);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   item = Create<EcnRedQueueDiscTestItem> (p4, dest, 0, hdr);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   item = Create<EcnRedQueueDiscTestItem> (p5, dest, 0, hdr);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 5 * modeSize, "There should be five packets in there");
 
@@ -148,23 +147,16 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 4 * modeSize, "There should be four packets in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
 
-  if (item->GetPacket ()->GetSize ())
-    {
-      item->GetPacket ()->PeekHeader (tmp_hdr);
-      NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn (), Ipv4Header::ECN_ECT0, "The packet should be marked");
-    }
+  NS_TEST_EXPECT_MSG_EQ ((DynamicCast<Ipv4QueueDiscItem>(item)->GetHeader()).GetEcn (), Ipv4Header::ECN_ECT0, "The packet should be marked");
+   
 
   item = DynamicCast<Ipv4QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 3 * modeSize, "There should be three packet in there");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
 
-  if (item->GetPacket ()->GetSize ())
-    {
-      item->GetPacket ()->PeekHeader (tmp_hdr);
-      NS_TEST_EXPECT_MSG_EQ (tmp_hdr.GetEcn (), Ipv4Header::ECN_ECT0, "The packet should be marked");
-    }
-
+  NS_TEST_EXPECT_MSG_EQ ((DynamicCast<Ipv4QueueDiscItem>(item)->GetHeader()).GetEcn (), Ipv4Header::ECN_ECT0, "The packet should be marked");
+   
   item = DynamicCast<Ipv4QueueDiscItem> (queue->Dequeue ());
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
@@ -214,21 +206,21 @@ EcnRedQueueDiscTestCase::RunRedTest (StringValue mode)
   queue->Initialize ();
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 0 * modeSize, "There should be no packets in there");
   item = Create<EcnRedQueueDiscTestItem> (p1, dest, 0, hdr1);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 1 * modeSize, "There should be one packet in there");
   item = Create<EcnRedQueueDiscTestItem> (p2, dest, 0, hdr1);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 2 * modeSize, "There should be two packets in there");
   item = Create<EcnRedQueueDiscTestItem> (p3, dest, 0, hdr1);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   item = Create<EcnRedQueueDiscTestItem> (p4, dest, 0, hdr1);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   item = Create<EcnRedQueueDiscTestItem> (p5, dest, 0, hdr1);
-  item->AddHeader ();
+ 
   queue->Enqueue (item);
   NS_TEST_EXPECT_MSG_EQ (queue->GetQueueSize (), 5 * modeSize, "There should be five packets in there");
 
@@ -401,7 +393,7 @@ EcnRedQueueDiscTestCase::Enqueue (Ptr<RedQueueDisc> queue, uint32_t size, uint32
     {
       Ptr<Packet> p = Create<Packet> (size);
       item = Create<EcnRedQueueDiscTestItem> (p, dest, 0, hdr);
-      item->AddHeader ();
+     
       queue->Enqueue (item);
     }
 }
@@ -417,7 +409,6 @@ EcnRedQueueDiscTestCase::EnqueueNonEcnCapable (Ptr<RedQueueDisc> queue, uint32_t
     {
       Ptr<Packet> p = Create<Packet> (size);
       item = Create<EcnRedQueueDiscTestItem> (p, dest, 0, hdr);
-      item->AddHeader ();
       queue->Enqueue (item);
 
     }

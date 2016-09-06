@@ -80,22 +80,10 @@ public:
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
   /**
-   * \brief Checks whether the packet has ECN_ECT0 or ECN_ECT1 bits set 
-   * \return true if the packet has ECN_ECT0 or ECN_ECT1 bits set, false otherwise
-   */
-  bool IsEcnCapable (void) const;
-
-  /**
-   * \brief Marks the packet by setting ECN_CE bits
+   * \brief Marks the packet by setting ECN_CE bits if the packet has ECN_ECT0 or ECN_ECT1 bits set
    * \return true if the packet gets marked, false otherwise
    */
   virtual bool Mark (void);
-
-  /** 
-   * \brief Checks whether the packet is already marked with ECN_CE
-   * \return true if the packet is already marked with ECN_CE, false otherwise
-   */  
-  virtual bool IsMarked (void) const;
 
 private:
   /**

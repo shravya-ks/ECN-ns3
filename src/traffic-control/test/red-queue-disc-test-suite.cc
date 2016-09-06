@@ -37,7 +37,6 @@ public:
   virtual ~RedQueueDiscTestItem ();
   virtual void AddHeader (void);
   virtual bool Mark(void);
-  virtual bool IsMarked(void) const;
 
 private:
   RedQueueDiscTestItem ();
@@ -61,12 +60,6 @@ RedQueueDiscTestItem::AddHeader (void)
 
 bool
 RedQueueDiscTestItem::Mark (void)
-{
-  return false;
-}
-
-bool
-RedQueueDiscTestItem::IsMarked (void) const
 {
   return false;
 }
