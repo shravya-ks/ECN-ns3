@@ -1025,8 +1025,8 @@ TcpSocketBase::DoConnect (void)
 
   // A new connection is allowed only if this socket does not have a connection
   if (m_state == CLOSED || m_state == LISTEN || m_state == SYN_SENT || m_state == LAST_ACK || m_state == CLOSE_WAIT)
-    { // send a SYN packet and change state into SYN_SENT
-      SendEmptyPacket (TcpHeader::SYN);
+    { // send a SYN packet with ECE and CWR flags set and change state into SYN_SENT
+      SendEmptyPacket (TcpHeader::SYN | TcpHeader::ECE | TcpHeader::CWR);
       NS_LOG_DEBUG (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
     }
@@ -2373,7 +2373,7 @@ TcpSocketBase::SetupEndpoint6 ()
 
 /* This function is called only if a SYN received in LISTEN state. After
    TcpSocketBase cloned, allocate a new end point to handle the incoming
-   connection and send a SYN+ACK to complete the handshake. */
+   connection and send a SYN+ACK+ECE to complete the handshake. */
 void
 TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
                              const Address& fromAddress, const Address& toAddress)
@@ -2406,7 +2406,7 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Set the sequence number and send SYN+ACK
   m_rxBuffer->SetNextRxSequence (h.GetSequenceNumber () + SequenceNumber32 (1));
 
-  SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);
+  SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK | TcpHeader::ECE);
 }
 
 void
