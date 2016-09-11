@@ -999,6 +999,7 @@ protected:
 
   // State-related attributes
   TracedValue<TcpStates_t> m_state;         //!< TCP state
+  TracedValue<EcnStates_t> m_ecn_state;     //!< ECN state
   mutable enum SocketErrno m_errno;         //!< Socket error code
   bool                     m_closeNotified; //!< Told app to close socket
   bool                     m_closeOnEmpty;  //!< Close socket upon tx buffer emptied

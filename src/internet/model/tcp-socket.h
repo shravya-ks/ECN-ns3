@@ -88,6 +88,16 @@ public:
     LAST_STATE    /**< Last state, used only in debug messages                */
   } TcpStates_t;
 
+ typedef enum {
+    NO_ECN = 0,     //ECN disabled traffic 
+    ECN_IDLE,      //ECN is enabled  but right now there is no ece or cwr
+    ECN_CE_RCVD, 
+    ECN_ECE_SENT,
+    ECN_ECE_RCVD,
+    ECN_CWR_SENT,
+    ECN_CWR_RCVD
+  } EcnStates_t;
+
   /**
    * \brief Literal names of TCP states for use in log messages
    */

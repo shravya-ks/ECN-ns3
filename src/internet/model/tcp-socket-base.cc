@@ -1029,6 +1029,7 @@ TcpSocketBase::DoConnect (void)
       SendEmptyPacket (TcpHeader::SYN | TcpHeader::ECE | TcpHeader::CWR);
       NS_LOG_DEBUG (TcpStateName[m_state] << " -> SYN_SENT");
       m_state = SYN_SENT;
+      m_ecn_state = ECN_IDLE;
     }
   else if (m_state != TIME_WAIT)
     { // In states SYN_RCVD, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSING, an connection
@@ -1135,7 +1136,10 @@ TcpSocketBase::ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port,
   Address fromAddress = InetSocketAddress (header.GetSource (), port);
   Address toAddress = InetSocketAddress (header.GetDestination (),
                                          m_endPoint->GetLocalPort ());
-
+  if(header.GetEcn() == Ipv4Header::ECN_CE)
+    {
+      m_ecn_state = ECN_CE_RCVD;   
+    }
   DoForwardUp (packet, fromAddress, toAddress);
 }
 
@@ -1152,6 +1156,10 @@ TcpSocketBase::ForwardUp6 (Ptr<Packet> packet, Ipv6Header header, uint16_t port,
   Address fromAddress = Inet6SocketAddress (header.GetSourceAddress (), port);
   Address toAddress = Inet6SocketAddress (header.GetDestinationAddress (),
                                           m_endPoint6->GetLocalPort ());
+  if(header.GetEcn() == Ipv6Header::ECN_CE)
+    {
+      m_ecn_state = ECN_CE_RCVD;   
+    }
 
   DoForwardUp (packet, fromAddress, toAddress);
 }
@@ -1193,6 +1201,9 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
   // Peel off TCP header and do validity checking
   TcpHeader tcpHeader;
   uint32_t bytesRemoved = packet->RemoveHeader (tcpHeader);
+
+  NS_LOG_DEBUG("Checking header here "<<tcpHeader<<" and flags "<<(int)tcpHeader.GetFlags());
+
   SequenceNumber32 seq = tcpHeader.GetSequenceNumber ();
   if (bytesRemoved == 0 || bytesRemoved > 60)
     {
@@ -1210,7 +1221,15 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
       // Acknowledgement should be sent for all unacceptable packets (RFC793, p.69)
       if (m_state == ESTABLISHED && !(tcpHeader.GetFlags () & TcpHeader::RST))
         {
-          SendEmptyPacket (TcpHeader::ACK);
+          if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+            {
+              //Receiver sets ECE flags when it receives a packet with CE bit on or sender hasn’t sent a packet with CWR set
+              SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);  
+            }
+          else
+            {
+              SendEmptyPacket (TcpHeader::ACK);
+            }
         }
       return;
     }
@@ -1708,7 +1727,7 @@ TcpSocketBase::ProcessListen (Ptr<Packet> packet, const TcpHeader& tcpHeader,
 
   // Fork a socket if received a SYN. Do nothing otherwise.
   // C.f.: the LISTEN part in tcp_v4_do_rcv() in tcp_ipv4.c in Linux kernel
-  if (tcpflags != TcpHeader::SYN)
+  if (tcpflags != (TcpHeader::SYN | TcpHeader::ECE | TcpHeader::CWR))
     {
       return;
     }
@@ -1757,12 +1776,13 @@ TcpSocketBase::ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader)
       m_rxBuffer->SetNextRxSequence (tcpHeader.GetSequenceNumber () + SequenceNumber32 (1));
       SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);
     }
-  else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK)
+  else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK | TcpHeader::ECE)
            && m_tcb->m_nextTxSequence + SequenceNumber32 (1) == tcpHeader.GetAckNumber ())
     { // Handshake completed
       NS_LOG_DEBUG ("SYN_SENT -> ESTABLISHED");
       m_congestionControl->CongestionStateSet (m_tcb, TcpSocketState::CA_OPEN);
       m_state = ESTABLISHED;
+      m_ecn_state = ECN_IDLE;
       m_connected = true;
       m_retxEvent.Cancel ();
       m_rxBuffer->SetNextRxSequence (tcpHeader.GetSequenceNumber () + SequenceNumber32 (1));
@@ -2144,7 +2164,7 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (GetIpTos ());
+      ipTosTag.SetTos (GetIpTos () | 0x02);
       p->AddPacketTag (ipTosTag);
     }
 
@@ -2273,7 +2293,7 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
     { // Retransmit SYN / SYN+ACK / FIN / FIN+ACK to guard against lost
       NS_LOG_LOGIC ("Schedule retransmission timeout at time "
                     << Simulator::Now ().GetSeconds () << " to expire at time "
-                    << (Simulator::Now () + m_rto.Get ()).GetSeconds ());
+                    << (Simulator::Now () + m_rto.Get ()).GetSeconds () <<" header "<< header <<" flags "<< (int)flags);
       m_retxEvent = Simulator::Schedule (m_rto, &TcpSocketBase::SendEmptyPacket, this, flags);
     }
 }
@@ -2400,6 +2420,7 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_DEBUG ("LISTEN -> SYN_RCVD");
   m_state = SYN_RCVD;
+  m_ecn_state = ECN_IDLE;
   m_synCount = m_synRetries;
   m_dataRetrCount = m_dataRetries;
   SetupCallback ();
@@ -2447,6 +2468,12 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
       m_delAckCount = 0;
     }
 
+  if(m_ecn_state ==  ECN_ECE_RCVD) 
+     {
+       flags |= TcpHeader::CWR;
+       m_ecn_state = ECN_CWR_SENT; 
+     }
+
   /*
    * Add tags for each socket option.
    * Note that currently the socket adds both IPv4 tag and IPv6 tag
@@ -2456,7 +2483,10 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (GetIpTos ());
+      if((GetIpTos () & 0x3) == 0)
+        { 
+          ipTosTag.SetTos (GetIpTos () | 0x2);
+        }
       p->AddPacketTag (ipTosTag);
     }
 
