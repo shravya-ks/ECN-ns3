@@ -1138,7 +1138,8 @@ TcpSocketBase::ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port,
                                          m_endPoint->GetLocalPort ());
   if(header.GetEcn() == Ipv4Header::ECN_CE)
     {
-      m_ecn_state = ECN_CE_RCVD;   
+      m_ecn_state = ECN_CE_RCVD; 
+      NS_LOG_DEBUG("Ecn ce recieved in tcp");  
     }
   DoForwardUp (packet, fromAddress, toAddress);
 }
@@ -1332,6 +1333,9 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
         { // Since m_endPoint is not configured yet, we cannot use SendRST here
           TcpHeader h;
           Ptr<Packet> p = Create<Packet> ();
+SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (0x02);
+      p->AddPacketTag (ipTosTag);
           h.SetFlags (TcpHeader::RST);
           h.SetSequenceNumber (m_tcb->m_nextTxSequence);
           h.SetAckNumber (m_rxBuffer->NextRxSequence ());
@@ -1340,6 +1344,7 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
           h.SetWindowSize (AdvertisedWindowSize ());
           AddOptions (h);
           m_txTrace (p, h, this);
+
           m_tcp->SendPacket (p, h, toAddress, fromAddress, m_boundnetdevice);
         }
       break;
@@ -1391,8 +1396,12 @@ TcpSocketBase::ProcessEstablished (Ptr<Packet> packet, const TcpHeader& tcpHeade
   uint8_t tcpflags = tcpHeader.GetFlags () & ~(TcpHeader::PSH | TcpHeader::URG);
 
   // Different flags are different events
-  if (tcpflags == TcpHeader::ACK)
+  if (tcpflags == TcpHeader::ACK || tcpflags == (TcpHeader::ACK | TcpHeader::ECE) || tcpflags == (TcpHeader::ACK | TcpHeader::CWR))
     {
+      if((tcpflags & TcpHeader::ECE) !=0)
+         m_ecn_state = ECN_ECE_RCVD;
+      if((tcpflags & TcpHeader::CWR) !=0)
+         m_ecn_state = ECN_CWR_RCVD;
       if (tcpHeader.GetAckNumber () < m_txBuffer->HeadSequence ())
         {
           // Case 1:  If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be ignored.
@@ -1409,8 +1418,14 @@ TcpSocketBase::ProcessEstablished (Ptr<Packet> packet, const TcpHeader& tcpHeade
           // Pag. 72 RFC 793
           NS_LOG_LOGIC ("Ignored ack of " << tcpHeader.GetAckNumber () <<
                         " HighTxMark = " << m_tcb->m_highTxMark);
-
-          SendEmptyPacket (TcpHeader::ACK);
+          if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+            {
+              SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+            }
+          else
+            {
+              SendEmptyPacket (TcpHeader::ACK);
+            } 
         }
       else
         {
@@ -2164,7 +2179,16 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (GetIpTos () | 0x02);
+      if((GetIpTos () & 0x3) == 0)
+        { 
+          ipTosTag.SetTos (GetIpTos () | 0x2);
+        }
+      p->AddPacketTag (ipTosTag);
+    }
+ else
+    {
+      SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (0x02);
       p->AddPacketTag (ipTosTag);
     }
 
@@ -2472,6 +2496,11 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
      {
        flags |= TcpHeader::CWR;
        m_ecn_state = ECN_CWR_SENT; 
+       NS_LOG_DEBUG ("CWND AND SSThreshold before  = "<< m_tcb->m_cWnd<<" "<< m_tcb->m_ssThresh);
+       m_tcb->m_cWnd = m_tcb->m_cWnd/2;
+       m_tcb->m_ssThresh = m_tcb->m_cWnd;
+       NS_LOG_DEBUG ("CWND AND SSThreshold after  = "<< m_tcb->m_cWnd <<" "<< m_tcb->m_ssThresh);
+       NS_LOG_DEBUG ("Congestion window halved coz of ecn");
      }
 
   /*
@@ -2487,6 +2516,12 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
         { 
           ipTosTag.SetTos (GetIpTos () | 0x2);
         }
+      p->AddPacketTag (ipTosTag);
+    }
+   else
+    {
+      SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (0x02);
       p->AddPacketTag (ipTosTag);
     }
 
@@ -2774,13 +2809,27 @@ TcpSocketBase::ReceivedData (Ptr<Packet> p, const TcpHeader& tcpHeader)
   SequenceNumber32 expectedSeq = m_rxBuffer->NextRxSequence ();
   if (!m_rxBuffer->Add (p, tcpHeader))
     { // Insert failed: No data or RX buffer full
-      SendEmptyPacket (TcpHeader::ACK);
+       if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+         {
+           SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+         }
+       else
+         {
+           SendEmptyPacket (TcpHeader::ACK);
+         } 
       return;
     }
   // Now send a new ACK packet acknowledging all received and delivered data
   if (m_rxBuffer->Size () > m_rxBuffer->Available () || m_rxBuffer->NextRxSequence () > expectedSeq + p->GetSize ())
     { // A gap exists in the buffer, or we filled a gap: Always ACK
-      SendEmptyPacket (TcpHeader::ACK);
+       if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+         {
+           SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+         }
+       else
+         {
+           SendEmptyPacket (TcpHeader::ACK);
+         } 
     }
   else
     { // In-sequence packet: ACK if delayed ack count allows
@@ -2788,7 +2837,14 @@ TcpSocketBase::ReceivedData (Ptr<Packet> p, const TcpHeader& tcpHeader)
         {
           m_delAckEvent.Cancel ();
           m_delAckCount = 0;
-          SendEmptyPacket (TcpHeader::ACK);
+          if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+            {
+              SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+            }
+          else
+            {
+              SendEmptyPacket (TcpHeader::ACK);
+            } 
         }
       else if (m_delAckEvent.IsExpired ())
         {
@@ -2942,7 +2998,14 @@ void
 TcpSocketBase::DelAckTimeout (void)
 {
   m_delAckCount = 0;
-  SendEmptyPacket (TcpHeader::ACK);
+  if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+    {
+      SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+    }
+  else
+    {
+      SendEmptyPacket (TcpHeader::ACK);
+    } 
 }
 
 void
@@ -2985,7 +3048,9 @@ TcpSocketBase::PersistTimeout ()
       tcpHeader.SetDestinationPort (m_endPoint6->GetPeerPort ());
     }
   AddOptions (tcpHeader);
-
+SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (0x02);
+      p->AddPacketTag (ipTosTag);
   m_txTrace (p, tcpHeader, this);
 
   if (m_endPoint != 0)
@@ -3168,7 +3233,14 @@ TcpSocketBase::SetRcvBufSize (uint32_t size)
    */
   if (oldSize < size && m_connected)
     {
-      SendEmptyPacket (TcpHeader::ACK);
+      if(m_ecn_state == ECN_CE_RCVD || m_ecn_state == ECN_ECE_SENT)
+        {
+          SendEmptyPacket (TcpHeader::ACK | TcpHeader::ECE);
+        }
+        else
+        {
+          SendEmptyPacket (TcpHeader::ACK);
+        }     
     }
 }
 
