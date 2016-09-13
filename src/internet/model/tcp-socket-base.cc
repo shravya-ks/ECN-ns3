@@ -1244,9 +1244,12 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
         {
           if(tcpHeader.GetFlags () & TcpHeader::CWR )
             {
-              m_ecnState = ECN_CWR_RCVD;
+              //check if a packet with ce bit set is recieved, if so, then do not change the state to ecn_cwr_rcvd
+              if (m_ecnState != ECN_CE_RCVD) 
+                {
+                  m_ecnState = ECN_CWR_RCVD;
+                }
             }
-
           if(m_ecnState == ECN_CE_RCVD || m_ecnState == ECN_ECE_SENT)
             {
               //Receiver sets ECE flags when it receives a packet with CE bit on or sender hasn’t sent a packet with CWR set
@@ -2587,9 +2590,9 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
 
   if(m_ecnState ==  ECN_ECE_RCVD) 
      {
-       flags |= TcpHeader::CWR;
-       m_ecnState = ECN_CWR_SENT; 
+       flags |= TcpHeader::CWR; 
        m_ecnEchoSeq = seq;
+       m_ecnState = ECN_CWR_SENT;
        NS_LOG_DEBUG ("CWR flags set ");
      }
 
@@ -2770,8 +2773,7 @@ TcpSocketBase::SendPendingData (bool withAck)
    {
       if (m_ecnState == ECN_ECE_RCVD)
         {
-          NS_LOG_INFO ("Backoff mechanism by reducing CWND  by half because we've received ECN Echo.");
-          m_ecnState = ECN_CWR_SENT;
+          NS_LOG_INFO ("Backoff mechanism by reducing CWND  by half because we've received ECN Echo");
           m_tcb->m_ssThresh = m_congestionControl->GetSsThresh (m_tcb, BytesInFlight ());  
           m_tcb->m_cWnd = std::max((uint32_t)m_tcb->m_cWnd/2, m_tcb->m_segmentSize); 
         }
