@@ -90,12 +90,11 @@ public:
 
  typedef enum {
     NO_ECN = 0,     //ECN disabled traffic 
-    ECN_IDLE,      //ECN is enabled  but right now there is no ece or cwr
+    ECN_IDLE,       //ECN is enabled  but right now there is no ECE or CWR
     ECN_CE_RCVD, 
     ECN_ECE_SENT,
     ECN_ECE_RCVD,
-    ECN_CWR_SENT,
-    ECN_CWR_RCVD
+    ECN_CWR_SENT
   } EcnStates_t;
 
   /**

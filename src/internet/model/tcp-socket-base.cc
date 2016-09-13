@@ -1244,10 +1244,10 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
         {
           if(tcpHeader.GetFlags () & TcpHeader::CWR )
             {
-              //check if a packet with ce bit set is recieved, if so, then do not change the state to ecn_cwr_rcvd
+              //check if a packet with ce bit set is recieved, if so, then do not change the state to ECN_IDLE
               if (m_ecnState != ECN_CE_RCVD) 
                 {
-                  m_ecnState = ECN_CWR_RCVD;
+                  m_ecnState = ECN_IDLE;
                 }
             }
           if(m_ecnState == ECN_CE_RCVD || m_ecnState == ECN_ECE_SENT)
