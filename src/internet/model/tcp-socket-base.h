@@ -999,7 +999,6 @@ protected:
 
   // State-related attributes
   TracedValue<TcpStates_t> m_state;         //!< TCP state
-  TracedValue<EcnStates_t> m_ecn_state;     //!< ECN state
   mutable enum SocketErrno m_errno;         //!< Socket error code
   bool                     m_closeNotified; //!< Told app to close socket
   bool                     m_closeOnEmpty;  //!< Close socket upon tx buffer emptied
@@ -1046,6 +1045,11 @@ protected:
 
   TracedCallback<Ptr<const Packet>, const TcpHeader&,
                  Ptr<const TcpSocketBase> > m_rxTrace; //!< Trace of received packets
+  
+  //Ecn-related parameters
+  bool                     m_ecn;             //!< Socket ECN capability
+  TracedValue<EcnStates_t> m_ecnState;        //!< Current ECN State, represented as combination of EcnState values
+  TracedValue<SequenceNumber32> m_ecnEchoSeq; //< Sequence number of the last received ECN echo
 };
 
 /**
