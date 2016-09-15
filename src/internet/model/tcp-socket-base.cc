@@ -1362,9 +1362,17 @@ TcpSocketBase::DoForwardUp (Ptr<Packet> packet, const Address &fromAddress,
         { // Since m_endPoint is not configured yet, we cannot use SendRST here
           TcpHeader h;
           Ptr<Packet> p = Create<Packet> ();
-SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (0x02);
-      p->AddPacketTag (ipTosTag);
+          if (m_ecnState != NO_ECN )
+            {
+              SocketIpTosTag ipTosTag;
+              ipTosTag.SetTos (0x02);
+              p->AddPacketTag (ipTosTag);
+                
+              SocketIpv6TclassTag ipTclassTag;
+              ipTclassTag.SetTclass (0x02);
+              p->AddPacketTag (ipTclassTag);
+
+            }
           h.SetFlags (TcpHeader::RST);
           h.SetSequenceNumber (m_tcb->m_nextTxSequence);
           h.SetAckNumber (m_rxBuffer->NextRxSequence ());
@@ -1847,9 +1855,8 @@ TcpSocketBase::ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader)
       else
         {
           m_ecnState = NO_ECN;
+          SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);    
         }
-
-      SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);    
     }
   else if (tcpflags == (TcpHeader::SYN | TcpHeader::ACK )
            && m_tcb->m_nextTxSequence + SequenceNumber32 (1) == tcpHeader.GetAckNumber ())
@@ -1948,14 +1955,12 @@ TcpSocketBase::ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
           NS_LOG_INFO ("Received ECN SYN packet");
           m_ecnState = ECN_IDLE;
           SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK |TcpHeader::ECE);
-          return;
         }
       else
         {
           m_ecnState = NO_ECN;
+          SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);
         }
-
-      SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK);
     }
   else if (tcpflags == (TcpHeader::FIN | TcpHeader::ACK))
     {
@@ -2265,25 +2270,49 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      if((GetIpTos () & 0x3) == 0)
+      if(m_ecnState != NO_ECN && (GetIpTos () & 0x3) == 0)
         { 
           ipTosTag.SetTos (GetIpTos () | 0x2);
         }
+      else
+        {
+          ipTosTag.SetTos (GetIpTos ());
+        }
       p->AddPacketTag (ipTosTag);
     }
- else
+  else
     {
-      SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (0x02);
-      p->AddPacketTag (ipTosTag);
+      if(m_ecnState != NO_ECN)
+        {
+          SocketIpTosTag ipTosTag;
+          ipTosTag.SetTos (0x02);
+          p->AddPacketTag (ipTosTag);
+        }
     }
 
   if (IsManualIpv6Tclass ())
     {
       SocketIpv6TclassTag ipTclassTag;
-      ipTclassTag.SetTclass (GetIpv6Tclass ());
+      if(m_ecnState != NO_ECN && (GetIpv6Tclass () & 0x3) == 0)
+        {
+           ipTclassTag.SetTclass (GetIpv6Tclass () | 0x2);
+        }
+      else
+        {
+          ipTclassTag.SetTclass (GetIpv6Tclass ());
+        }
       p->AddPacketTag (ipTclassTag);
     }
+  else
+    {
+      if(m_ecnState != NO_ECN)
+        {
+          SocketIpv6TclassTag ipTclassTag;
+          ipTclassTag.SetTclass (0x02);
+          p->AddPacketTag (ipTclassTag);
+        }
+    }
+
 
   if (IsManualIpTtl ())
     {
@@ -2537,7 +2566,7 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Set the sequence number and send SYN+ACK
   m_rxBuffer->SetNextRxSequence (h.GetSequenceNumber () + SequenceNumber32 (1));
 
-  if(m_ecn)
+  if(m_ecn && (h.GetFlags () & (TcpHeader::CWR | TcpHeader::ECE)) == (TcpHeader::CWR | TcpHeader::ECE)  )
     {
       SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK | TcpHeader::ECE);
       m_ecnState = ECN_IDLE;
@@ -2605,25 +2634,46 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      if((GetIpTos () & 0x3) == 0)
+      if(m_ecnState != NO_ECN && (GetIpTos () & 0x3) == 0)
         { 
           ipTosTag.SetTos (GetIpTos () | 0x2);
         }
+      ipTosTag.SetTos (GetIpTos ());
       p->AddPacketTag (ipTosTag);
     }
    else
     {
-      SocketIpTosTag ipTosTag;
-      ipTosTag.SetTos (0x02);
-      p->AddPacketTag (ipTosTag);
+      if(m_ecnState != NO_ECN)
+      {
+        SocketIpTosTag ipTosTag;
+        ipTosTag.SetTos (0x02);
+        p->AddPacketTag (ipTosTag);
+      }
     }
 
-  if (IsManualIpv6Tclass ())
+ if (IsManualIpv6Tclass ())
     {
       SocketIpv6TclassTag ipTclassTag;
-      ipTclassTag.SetTclass (GetIpv6Tclass ());
+      if(m_ecnState != NO_ECN && (GetIpv6Tclass () & 0x3) == 0)
+        {
+           ipTclassTag.SetTclass (GetIpv6Tclass () | 0x2);
+        }
+      else
+        {
+          ipTclassTag.SetTclass (GetIpv6Tclass ());
+        }
       p->AddPacketTag (ipTclassTag);
     }
+  else
+    {
+      if(m_ecnState != NO_ECN)
+        {
+          SocketIpv6TclassTag ipTclassTag;
+          ipTclassTag.SetTclass (0x02);
+          p->AddPacketTag (ipTclassTag);
+        }
+    }
+
 
   if (IsManualIpTtl ())
     {
@@ -3153,9 +3203,16 @@ TcpSocketBase::PersistTimeout ()
     }
   AddOptions (tcpHeader);
   //Send a packet tag for ecn bits in ip
-  SocketIpTosTag ipTosTag;
-  ipTosTag.SetTos (0x02);
-  p->AddPacketTag (ipTosTag);
+  if (m_ecnState != NO_ECN)
+    {
+      SocketIpTosTag ipTosTag;
+      ipTosTag.SetTos (0x02);
+      p->AddPacketTag (ipTosTag);
+ 
+      SocketIpv6TclassTag ipTclassTag;
+      ipTclassTag.SetTclass (0x02);
+      p->AddPacketTag (ipTclassTag);
+    }
   m_txTrace (p, tcpHeader, this);
 
   if (m_endPoint != 0)
