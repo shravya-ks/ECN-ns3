@@ -2265,49 +2265,16 @@ TcpSocketBase::SendEmptyPacket (uint8_t flags)
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      if(m_ecnState != NO_ECN && (GetIpTos () & 0x3) == 0)
-        { 
-          ipTosTag.SetTos (GetIpTos () | 0x2);
-        }
-      else
-        {
-          ipTosTag.SetTos (GetIpTos ());
-        }
+      ipTosTag.SetTos (GetIpTos ());
       p->AddPacketTag (ipTosTag);
-    }
-  else
-    {
-      if(m_ecnState != NO_ECN)
-        {
-          SocketIpTosTag ipTosTag;
-          ipTosTag.SetTos (0x02);
-          p->AddPacketTag (ipTosTag);
-        }
     }
 
   if (IsManualIpv6Tclass ())
     {
       SocketIpv6TclassTag ipTclassTag;
-      if(m_ecnState != NO_ECN && (GetIpv6Tclass () & 0x3) == 0)
-        {
-           ipTclassTag.SetTclass (GetIpv6Tclass () | 0x2);
-        }
-      else
-        {
-          ipTclassTag.SetTclass (GetIpv6Tclass ());
-        }
+      ipTclassTag.SetTclass (GetIpv6Tclass ());
       p->AddPacketTag (ipTclassTag);
     }
-  else
-    {
-      if(m_ecnState != NO_ECN)
-        {
-          SocketIpv6TclassTag ipTclassTag;
-          ipTclassTag.SetTclass (0x02);
-          p->AddPacketTag (ipTclassTag);
-        }
-    }
-
 
   if (IsManualIpTtl ())
     {
@@ -2628,16 +2595,20 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
   if (GetIpTos ())
     {
       SocketIpTosTag ipTosTag;
-      if(m_ecnState != NO_ECN && (GetIpTos () & 0x3) == 0)
+      NS_LOG_LOGIC (" ECT bits should not be set on retranmsitted packets ");
+      if(m_ecnState != NO_ECN && (GetIpTos () & 0x3) == 0 && !isRetransmission)
         { 
           ipTosTag.SetTos (GetIpTos () | 0x2);
         }
-      ipTosTag.SetTos (GetIpTos ());
+      else
+        {
+          ipTosTag.SetTos (GetIpTos ());
+        }
       p->AddPacketTag (ipTosTag);
     }
    else
     {
-      if(m_ecnState != NO_ECN)
+      if(m_ecnState != NO_ECN && !isRetransmission)
       {
         SocketIpTosTag ipTosTag;
         ipTosTag.SetTos (0x02);
@@ -2648,7 +2619,7 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
  if (IsManualIpv6Tclass ())
     {
       SocketIpv6TclassTag ipTclassTag;
-      if(m_ecnState != NO_ECN && (GetIpv6Tclass () & 0x3) == 0)
+      if(m_ecnState != NO_ECN && (GetIpv6Tclass () & 0x3) == 0 && !isRetransmission)
         {
            ipTclassTag.SetTclass (GetIpv6Tclass () | 0x2);
         }
@@ -2660,7 +2631,7 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
     }
   else
     {
-      if(m_ecnState != NO_ECN)
+      if(m_ecnState != NO_ECN && !isRetransmission)
         {
           SocketIpv6TclassTag ipTclassTag;
           ipTclassTag.SetTclass (0x02);
