@@ -1793,15 +1793,7 @@ TcpSocketBase::ProcessListen (Ptr<Packet> packet, const TcpHeader& tcpHeader,
       return;
     }
 
-  if (m_ecn && (tcpHeader.GetFlags () & (TcpHeader::CWR | TcpHeader::ECE)) == (TcpHeader::CWR | TcpHeader::ECE))
-    {
-      NS_LOG_INFO (" Received ECN SYN packet and therefore, establish ECN Connection ");
-      m_ecnState = ECN_IDLE;
-    }
-  else
-    {
-      m_ecnState = NO_ECN;
-    }
+
   // Call socket's notify function to let the server app know we got a SYN
   // If the server app refuses the connection, do nothing
   if (!NotifyConnectionRequest (fromAddress))
@@ -1849,8 +1841,9 @@ TcpSocketBase::ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader)
       if (m_ecn && (tcpHeader.GetFlags () & (TcpHeader::CWR | TcpHeader::ECE)) == (TcpHeader::CWR | TcpHeader::ECE))
         {
           NS_LOG_INFO ("Received ECN SYN packet");
-          m_ecnState = ECN_IDLE;
           SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK | TcpHeader::ECE);
+          m_ecnState = ECN_IDLE;
+
         }
       else
         {
@@ -1870,6 +1863,8 @@ TcpSocketBase::ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader)
       m_tcb->m_highTxMark = ++m_tcb->m_nextTxSequence;
       m_txBuffer->SetHeadSequence (m_tcb->m_nextTxSequence);
     
+      SendEmptyPacket (TcpHeader::ACK);
+
       // Check if we received a ECN SYN-ACK packet
       if (m_ecn &&
             (tcpHeader.GetFlags () & (TcpHeader::CWR | TcpHeader::ECE)) == (TcpHeader::ECE))
@@ -1882,7 +1877,7 @@ TcpSocketBase::ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader)
           m_ecnState = NO_ECN;
         }
    
-      SendEmptyPacket (TcpHeader::ACK);
+     
       SendPendingData (m_connected);
       Simulator::ScheduleNow (&TcpSocketBase::ConnectionSucceeded, this);
       // Always respond to first data packet to speed up the connection.
@@ -1953,8 +1948,8 @@ TcpSocketBase::ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
       if (m_ecn && (tcpHeader.GetFlags () & (TcpHeader::CWR | TcpHeader::ECE)) == (TcpHeader::CWR | TcpHeader::ECE))
         {
           NS_LOG_INFO ("Received ECN SYN packet");
-          m_ecnState = ECN_IDLE;
           SendEmptyPacket (TcpHeader::SYN | TcpHeader::ACK |TcpHeader::ECE);
+          m_ecnState = ECN_IDLE;
         }
       else
         {
@@ -2559,7 +2554,6 @@ TcpSocketBase::CompleteFork (Ptr<Packet> p, const TcpHeader& h,
   // Change the cloned socket from LISTEN state to SYN_RCVD
   NS_LOG_DEBUG ("LISTEN -> SYN_RCVD");
   m_state = SYN_RCVD;
-  m_ecnState = ECN_IDLE;
   m_synCount = m_synRetries;
   m_dataRetrCount = m_dataRetries;
   SetupCallback ();
