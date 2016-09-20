@@ -327,7 +327,8 @@ TcpSocketBase::TcpSocketBase (void)
     m_isFirstPartialAck (true),
     m_ecn (true),
     m_ecnState (NO_ECN),
-    m_ecnEchoSeq (0)                      
+    m_ecnEchoSeq (0),
+    m_ecnCWRSeq (0)                      
 {
   NS_LOG_FUNCTION (this);
   m_rxBuffer = CreateObject<TcpRxBuffer> ();
@@ -403,7 +404,8 @@ TcpSocketBase::TcpSocketBase (const TcpSocketBase& sock)
     m_rxTrace (sock.m_rxTrace),
     m_ecn (sock.m_ecn),
     m_ecnState (sock.m_ecnState),
-    m_ecnEchoSeq (sock.m_ecnEchoSeq)
+    m_ecnEchoSeq (sock.m_ecnEchoSeq),
+    m_ecnCWRSeq (sock.m_ecnCWRSeq)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -1156,10 +1158,13 @@ TcpSocketBase::ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port,
   Address fromAddress = InetSocketAddress (header.GetSource (), port);
   Address toAddress = InetSocketAddress (header.GetDestination (),
                                          m_endPoint->GetLocalPort ());
-  if(header.GetEcn() == Ipv4Header::ECN_CE)
+  TcpHeader tcpHeader;
+  packet->PeekHeader(tcpHeader);
+  if(header.GetEcn() == Ipv4Header::ECN_CE && m_ecnCeSeq < tcpHeader.GetAckNumber ())
     {
+      NS_LOG_INFO ("Received CE flag is valid");
+      m_ecnCeSeq = tcpHeader.GetAckNumber ();
       m_ecnState = ECN_CE_RCVD; 
-      NS_LOG_DEBUG("Ecn ce recieved in tcp");  
     }
   DoForwardUp (packet, fromAddress, toAddress);
 }
@@ -1177,11 +1182,15 @@ TcpSocketBase::ForwardUp6 (Ptr<Packet> packet, Ipv6Header header, uint16_t port,
   Address fromAddress = Inet6SocketAddress (header.GetSourceAddress (), port);
   Address toAddress = Inet6SocketAddress (header.GetDestinationAddress (),
                                           m_endPoint6->GetLocalPort ());
-  if(header.GetEcn() == Ipv6Header::ECN_CE)
+                                       
+  TcpHeader tcpHeader;
+  packet->PeekHeader(tcpHeader);
+  if(header.GetEcn() == Ipv6Header::ECN_CE && m_ecnCeSeq < tcpHeader.GetAckNumber ())
     {
-      m_ecnState = ECN_CE_RCVD;   
+      NS_LOG_INFO ("Received CE flag is valid");
+      m_ecnCeSeq = tcpHeader.GetAckNumber ();
+      m_ecnState = ECN_CE_RCVD;  
     }
-
   DoForwardUp (packet, fromAddress, toAddress);
 }
 
@@ -1606,7 +1615,7 @@ TcpSocketBase::ReceivedAck (Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
       if ((m_ecnState !=NO_ECN) && (tcpHeader.GetFlags () & TcpHeader::ECE))
         {
-          NS_LOG_INFO ("Checking if the received ECN Echo is valid one");
+          NS_LOG_INFO ("Checking if the received ECN Echo is valid one to handle out of order packets");
           if (m_ecnEchoSeq < tcpHeader.GetAckNumber ())
             {
               NS_LOG_INFO ("Received ECN Echo is valid");
@@ -2577,11 +2586,13 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
       m_delAckEvent.Cancel ();
       m_delAckCount = 0;
     }
-
-  if(m_ecnState ==  ECN_ECE_RCVD) 
+  if(m_ecnState ==  ECN_ECE_RCVD && m_ecnEchoSeq.Get() > m_ecnCWRSeq.Get()) 
      {
+       NS_LOG_INFO ("Backoff mechanism by reducing CWND  by half because we've received ECN Echo");
+       m_tcb->m_ssThresh = m_congestionControl->GetSsThresh (m_tcb, BytesInFlight ());  
+       m_tcb->m_cWnd = std::max((uint32_t)m_tcb->m_cWnd/2, m_tcb->m_segmentSize);
        flags |= TcpHeader::CWR; 
-       m_ecnEchoSeq = seq;
+       m_ecnCWRSeq = seq;
        m_ecnState = ECN_CWR_SENT;
        NS_LOG_DEBUG ("CWR flags set ");
      }
@@ -2786,13 +2797,6 @@ TcpSocketBase::SendPendingData (bool withAck)
   uint32_t nPacketsSent = 0;
   while (m_txBuffer->SizeFromSequence (m_tcb->m_nextTxSequence))
    {
-      if (m_ecnState == ECN_ECE_RCVD)
-        {
-          NS_LOG_INFO ("Backoff mechanism by reducing CWND  by half because we've received ECN Echo");
-          m_tcb->m_ssThresh = m_congestionControl->GetSsThresh (m_tcb, BytesInFlight ());  
-          m_tcb->m_cWnd = std::max((uint32_t)m_tcb->m_cWnd/2, m_tcb->m_segmentSize); 
-        }
-
       uint32_t w = AvailableWindow (); // Get available window size
       // Stop sending if we need to wait for a larger Tx window (prevent silly window syndrome)
       if (w < m_tcb->m_segmentSize && m_txBuffer->SizeFromSequence (m_tcb->m_nextTxSequence) > w)

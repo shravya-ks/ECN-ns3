@@ -1049,7 +1049,10 @@ protected:
   //Ecn-related parameters
   bool                     m_ecn;             //!< Socket ECN capability
   TracedValue<EcnStates_t> m_ecnState;        //!< Current ECN State, represented as combination of EcnState values
-  TracedValue<SequenceNumber32> m_ecnEchoSeq; //< Sequence number of the last received ECN echo
+  TracedValue<SequenceNumber32> m_ecnEchoSeq; //!< Sequence number of the last received ECN echo
+  TracedValue<SequenceNumber32> m_ecnCeSeq;   //!< Sequence number of the last received Congestion Experienced
+  TracedValue<SequenceNumber32> m_ecnCWRSeq;  //!< Sequence number of the last sent CWR
+  
 };
 
 /**
