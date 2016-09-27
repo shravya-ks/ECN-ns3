@@ -99,7 +99,7 @@ CheckQueueSize (Ptr<QueueDisc> queue)
 void
 BuildAppsTest (uint32_t test)
 {
-  if ( (test == 1) || (test == 3) )
+  if ( (test == 1) || (test == 2) || (test == 3) )
     {
       // SINK is in the right side
       uint16_t port = 50000;
@@ -280,16 +280,16 @@ main (int argc, char *argv[])
   // Will only save in the directory if enable opts below
   pathOut = "."; // Current directory
   CommandLine cmd;
-  cmd.AddValue ("testNumber", "Run test 1, 3, 4 or 5", redTest);
+  cmd.AddValue ("testNumber", "Run test 1, 2, 3, 4 or 5", redTest);
   cmd.AddValue ("pathOut", "Path to save results from --writeForPlot/--writePcap/--writeFlowMonitor", pathOut);
   cmd.AddValue ("writeForPlot", "<0/1> to write results for plot (gnuplot)", writeForPlot);
   cmd.AddValue ("writePcap", "<0/1> to write results in pcapfile", writePcap);
   cmd.AddValue ("writeFlowMonitor", "<0/1> to enable Flow Monitor and write their results", flowMonitor);
 
   cmd.Parse (argc, argv);
-  if ( (redTest != 1) && (redTest != 3) && (redTest != 4) && (redTest != 5) )
+  if ( (redTest != 1) && (redTest != 2) && (redTest != 3) && (redTest != 4) && (redTest != 5) )
     {
-      NS_ABORT_MSG ("Invalid test number. Supported tests are 1, 3, 4 or 5");
+      NS_ABORT_MSG ("Invalid test number. Supported tests are 1, 2, 3, 4 or 5");
     }
 
   NS_LOG_INFO ("Create nodes");
@@ -326,7 +326,11 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::RedQueueDisc::MaxTh", DoubleValue (15));
   Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (1000));
 
-  if (redTest == 3) // test like 1, but with bad params
+  if (redTest == 2) // test like 1, but with ecn
+    {
+      Config::SetDefault ("ns3::TcpSocketBase::UseEcn", BooleanValue (true));
+    }
+  else if (redTest == 3) // test like 1, but with bad params
     {
       Config::SetDefault ("ns3::RedQueueDisc::MaxTh", DoubleValue (10));
       Config::SetDefault ("ns3::RedQueueDisc::QW", DoubleValue (0.003));
