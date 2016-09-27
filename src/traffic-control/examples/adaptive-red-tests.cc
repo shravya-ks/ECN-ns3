@@ -202,16 +202,16 @@ main (int argc, char *argv[])
   // Will only save in the directory if enable opts below
   pathOut = "."; // Current directory
   CommandLine cmd;
-  cmd.AddValue ("testNumber", "Run test 1, 2, 6, 7, 8, 9, 10, 12, 13, 14 or 15", aredTest);
+  cmd.AddValue ("testNumber", "Run test 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14 or 15", aredTest);
   cmd.AddValue ("pathOut", "Path to save results from --writeForPlot/--writePcap/--writeFlowMonitor", pathOut);
   cmd.AddValue ("writeForPlot", "<0/1> to write results for plot (gnuplot)", writeForPlot);
   cmd.AddValue ("writePcap", "<0/1> to write results in pcapfile", writePcap);
   cmd.AddValue ("writeFlowMonitor", "<0/1> to enable Flow Monitor and write their results", flowMonitor);
 
   cmd.Parse (argc, argv);
-  if ( (aredTest != 1) && (aredTest != 2) && (aredTest != 6) && (aredTest != 7) && (aredTest != 8) && (aredTest != 9) && (aredTest != 10) && (aredTest != 12) && (aredTest != 13) && (aredTest != 14) && (aredTest != 15) )
+  if ( (aredTest != 1) && (aredTest != 2) && (aredTest != 3) && (aredTest != 4) && (aredTest != 6) && (aredTest != 7) && (aredTest != 8) && (aredTest != 9) && (aredTest != 10) && (aredTest != 11) && (aredTest != 12) && (aredTest != 13) && (aredTest != 14) && (aredTest != 15) )
     {
-      std::cout << "Invalid test number. Supported tests are 1, 2, 6, 7, 8, 9, 10, 12, 13, 14 or 15" << std::endl;
+      std::cout << "Invalid test number. Supported tests are 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14 or 15" << std::endl;
       exit (1);
     }
 
@@ -259,6 +259,18 @@ main (int argc, char *argv[])
       Config::SetDefault ("ns3::RedQueueDisc::LInterm", DoubleValue (10));
       Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (25));
     }
+  else if (aredTest == 3) //test 3: red1ecn
+    {
+      Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (25));
+      Config::SetDefault ("ns3::TcpSocketBase::UseEcn", BooleanValue (true));
+    } 
+  else if (aredTest == 4) // test 4: red1Adaptecn
+    {
+      Config::SetDefault ("ns3::RedQueueDisc::ARED", BooleanValue (true));
+      Config::SetDefault ("ns3::RedQueueDisc::LInterm", DoubleValue (10));
+      Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (25));
+      Config::SetDefault ("ns3::TcpSocketBase::UseEcn", BooleanValue (true));
+    }
   else if (aredTest == 7) // test 7: fastlinkAutowq
     {
       Config::SetDefault ("ns3::RedQueueDisc::QW", DoubleValue (0.0));
@@ -277,6 +289,12 @@ main (int argc, char *argv[])
     {
       Config::SetDefault ("ns3::RedQueueDisc::ARED", BooleanValue (true));
       Config::SetDefault ("ns3::RedQueueDisc::LInterm", DoubleValue (10));
+    }
+  else if (aredTest == 11) // test 11: fastlinkAllAdaptecn
+    {
+      Config::SetDefault ("ns3::RedQueueDisc::ARED", BooleanValue (true));
+      Config::SetDefault ("ns3::RedQueueDisc::LInterm", DoubleValue (10));
+      Config::SetDefault ("ns3::TcpSocketBase::UseEcn", BooleanValue (true));
     }
   else if (aredTest == 12) // test 12: fastlinkAllAdapt1
     {
@@ -327,7 +345,7 @@ main (int argc, char *argv[])
 
   QueueDiscContainer queueDiscs;
 
-  if (aredTest == 1 || aredTest == 2)
+  if (aredTest == 1 || aredTest == 2 || aredTest == 3 || aredTest == 4)
     {
       p2p.SetQueue ("ns3::DropTailQueue");
       p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
@@ -393,7 +411,7 @@ main (int argc, char *argv[])
       devn3n5 = p2p.Install (n3n5);
       tchPfifo.Install (devn3n5);
     }
-  else if (aredTest == 6 || aredTest == 7 || aredTest == 8 || aredTest == 9 || aredTest == 10 || aredTest == 12)
+  else if (aredTest == 6 || aredTest == 7 || aredTest == 8 || aredTest == 9 || aredTest == 10 || aredTest ==11 || aredTest == 12)
     {
       p2p.SetQueue ("ns3::DropTailQueue");
       p2p.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
@@ -481,7 +499,7 @@ main (int argc, char *argv[])
 
   RedQueueDisc::Stats st = StaticCast<RedQueueDisc> (queueDiscs.Get (0))->GetStats ();
 
-  if (aredTest == 1 || aredTest == 2 || aredTest == 13)
+  if (aredTest == 1 || aredTest == 2 || aredTest == 3 || aredTest == 4 || aredTest == 13)
     {
       if (st.unforcedDrop > st.forcedDrop)
         {
@@ -495,7 +513,7 @@ main (int argc, char *argv[])
           exit (-1);
         }
     }
-  else if (aredTest == 6 || aredTest == 7 || aredTest == 8 || aredTest == 9 || aredTest == 10 || aredTest == 14 || aredTest ==15)
+  else if (aredTest == 6 || aredTest == 7 || aredTest == 8 || aredTest == 9 || aredTest == 10 || aredTest == 11 || aredTest == 14 || aredTest ==15)
     {
       if (st.unforcedDrop > st.forcedDrop)
         {
